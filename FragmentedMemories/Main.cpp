@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 
+#include "AnimatedModel.h"
 #include "Camera.h"
 #include "Shader.h"
 #include "stb_image.h"
@@ -101,13 +102,13 @@ int main()
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 	glfwSetCursorPosCallback(window, cursorPosCallback);
 	glfwSetScrollCallback(window, scrollCallback);
-	// glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	// glEnable(GL_BLEND);
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	// glEnable(GL_CULL_FACE);
 
-	Shader cubeShader{ "Shaders/cube.vert", "Shaders/cube.frag" };
+	Shader cubeShader{ "Shaders/anim.vert", "Shaders/anim.frag" };
 	cubeShader.use();
 	GLuint cubeShaderBlockIndex = glGetUniformBlockIndex(cubeShader.id, "Matrices");
 	glUniformBlockBinding(cubeShader.id, cubeShaderBlockIndex, 0);
@@ -117,11 +118,11 @@ int main()
 	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
 
-	Model bob("Models/bob/boblampclean.md5mesh");
+	AnimatedModel bob("Models/Warrok/sitting_laughing.fbx");
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, projViewUBO);
 	glEnable(GL_CULL_FACE);
-
+	int i = 0;
 	while (!glfwWindowShouldClose(window))
 	{
 		float currentTime = glfwGetTime();
@@ -134,7 +135,8 @@ int main()
 		processInput(window);
 
 		glm::mat4 model = glm::identity<glm::mat4>();
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::translate(model, glm::vec3(0, -2, 0));
+		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		glm::mat4 view = gCamera.GetViewMatrix();
 		glm::mat4 proj = glm::perspective(glm::radians(gCamera.Zoom), float(windowWidth) / float(windowHeight), 0.001f, 1000.0f);
 
@@ -145,7 +147,8 @@ int main()
 		cubeShader.use();
 		cubeShader.SetMat4("model", glm::value_ptr(model));
 		
-		bob.draw(cubeShader);
+		bob.Draw(cubeShader, deltaTime);
+		i++;
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();

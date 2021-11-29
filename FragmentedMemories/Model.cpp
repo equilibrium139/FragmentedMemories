@@ -100,7 +100,7 @@ std::vector<Texture> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType 
 		aiString str;
 		mat->GetTexture(type, i, &str);
 		Texture& texture = textures[i];
-		texture.id = loadTexture(str.C_Str(), directory);
+		texture.id = LoadTexture(str.C_Str(), directory);
 		texture.type = texType;
 	}
 	return textures;

@@ -118,14 +118,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\libs\assimp-5.0.1\build\include;C:\libs\glm;C:\libs\assimp-5.0.1\include;C:\libs\glad\include;C:\libs\glfw-3.3.5.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\libs\assimp-5.0.1\build\include;C:\libs\glm;C:\libs\assimp-5.0.1\include;C:\libs\glad\include;C:\libs\glfw-3.3.5.bin.WIN64\include;C:\Libraries\OpenGLDependencies\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;assimp-vc142-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\libs\assimp-5.0.1\build\code\Debug;C:\libs\glfw-3.3.5.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\libs\assimp-5.0.1\build\code\Debug;C:\libs\glfw-3.3.5.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories);C:\Libraries\OpenGLDependencies\Libs</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,7 +136,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\libs\assimp-5.0.1\build\include;C:\libs\glm;C:\libs\assimp-5.0.1\include;C:\libs\glad\include;C:\libs\glfw-3.3.5.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\libs\assimp-5.0.1\build\include;C:\libs\glm;C:\libs\assimp-5.0.1\include;C:\libs\glad\include;C:\libs\glfw-3.3.5.bin.WIN64\include;C:\Libraries\OpenGLDependencies\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;assimp-vc142-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\libs\assimp-5.0.1\build\code\RelWithDebInfo;C:\libs\glfw-3.3.5.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\libs\assimp-5.0.1\build\code\RelWithDebInfo;C:\libs\glfw-3.3.5.bin.WIN64\lib-vc2019;%(AdditionalLibraryDirectories);C:\Libraries\OpenGLDependencies\Libs</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -160,6 +160,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AnimatedModel.cpp" />
+    <ClCompile Include="assview.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
