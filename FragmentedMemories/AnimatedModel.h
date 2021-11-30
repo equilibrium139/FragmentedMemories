@@ -20,11 +20,9 @@ struct SkinnedVertex
 
 struct SkinnedMesh
 {
-	std::vector<SkinnedVertex> vertices;
-	std::vector<unsigned int> indices;
+	unsigned int indices_begin, index_count;
 	std::vector<Texture> textures;
 	void Draw(Shader& shader);
-	unsigned int VAO, VBO, EBO;
 };
 
 struct Joint
@@ -63,6 +61,8 @@ struct AnimationClip
 struct AnimatedModel
 {
 	Skeleton skeleton;
+	std::vector<SkinnedVertex> vertices;
+	std::vector<unsigned int> indices;
 	std::vector<SkinnedMesh> meshes;
 	std::vector<JointPose> bind_pose;
 	AnimationClip clip;
@@ -71,10 +71,11 @@ struct AnimatedModel
 	void Draw(Shader& shader, float dt);
 private:
 	void LoadAnimatedModel(const std::string& path);
-	void CreateSkeleton(const aiScene* scene);
-	void CreateMesh(const aiScene* scene);
+	void CreateSkeleton(const aiScene* scene, const std::vector<aiNode*>& nodes, const std::vector<int>& parent);
+	void CreateMeshes(const aiScene* scene);
 	void CreateAnimationClip(const aiScene* scene);
 	float time = 0.0f;
+	unsigned int VAO, VBO, EBO;
 };
 
 

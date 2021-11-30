@@ -10,7 +10,7 @@
 #include "stb_image.h"
 
 static void PushChildrenOf(std::vector<aiNode*>& nodes, std::vector<int>& parent, unsigned int begin);
-static std::pair<std::vector<aiNode*>, std::vector<int>> FlattenNodes(aiNode* root);
+static std::pair<std::vector<aiNode*>, std::vector<int>> FlattenNodeHierarchy(aiNode* root);
 static glm::mat4x3 ToGLMMat(const aiMatrix4x4& mat);
 
 // All asserts here document some of my assumptions
@@ -49,10 +49,12 @@ static glm::mat4 ToMat4(glm::mat4x3& mat)
 
 void AnimatedModel::Draw(Shader& shader, float dt)
 {
-	time += dt;
-	std::cout << clip.frames_per_second / clip.frame_count << '\n';
-	float f = std::fmod(time, (clip.frames_per_second / clip.frame_count));
-	int pose_index = f;
+	static int pi = 0;
+	//time += dt;
+	//std::cout << clip.frames_per_second / clip.frame_count << '\n';
+	//float f = std::fmod(time, (clip.frames_per_second / clip.frame_count));
+	int pose_index = (pi / 3) % 250;
+	pi++;
 	/*SkeletonPose da_bind_bose;
 	da_bind_bose.local_joint_poses = bind_pose;
 	da_bind_bose.global_joint_poses.resize(skeleton.joints.size());*/
@@ -84,6 +86,8 @@ void AnimatedModel::Draw(Shader& shader, float dt)
 	shader.use();
 	glUniformMatrix4fv(glGetUniformLocation(shader.id, "skinning_matrices"), skeleton.joints.size(), GL_FALSE, glm::value_ptr(skinning_matrices[0]));
 
+	glBindVertexArray(VAO);
+
 	for (auto& mesh : meshes)
 	{
 		mesh.Draw(shader);
@@ -94,7 +98,7 @@ void AnimatedModel::LoadAnimatedModel(const std::string& path)
 {
 	assert(AI_LMW_MAX_WEIGHTS == 4);
 	Assimp::Importer importer;
-	unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_LimitBoneWeights | aiProcess_ValidateDataStructure;
+	unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_LimitBoneWeights | aiProcess_ValidateDataStructure | aiProcess_GenSmoothNormals;
 	const aiScene* scene = importer.ReadFile(path, flags);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -104,30 +108,35 @@ void AnimatedModel::LoadAnimatedModel(const std::string& path)
 	}
 
 	directory = path.substr(0, path.find_last_of('/'));
-	CreateSkeleton(scene);
-	CreateMesh(scene);
+
+	auto flattened_nodes = FlattenNodeHierarchy(scene->mRootNode);
+	auto& nodes = flattened_nodes.first;
+	auto& parent = flattened_nodes.second;
+
+	CreateSkeleton(scene, nodes, parent);
+	CreateMeshes(scene);
 	CreateAnimationClip(scene);
 }
 
-void AnimatedModel::CreateSkeleton(const aiScene* scene)
+void AnimatedModel::CreateSkeleton(const aiScene* scene, const std::vector<aiNode*>& nodes, const std::vector<int>& parent)
 {
-	auto pair = FlattenNodes(scene->mRootNode);
-	auto& flattened_nodes = pair.first;
-	auto& parent = pair.second;
-	const auto num_nodes = flattened_nodes.size();
-	std::vector<aiBone*> node_bones(num_nodes, nullptr);
+	const auto num_nodes = nodes.size();
 
+	// Mark all nodes which correspond to a bone
+	std::vector<aiBone*> node_bones(num_nodes, nullptr);
 	const auto num_meshes = scene->mNumMeshes;
 	for (auto i = 0u; i < num_meshes; i++)
 	{
 		auto mesh = scene->mMeshes[i];
+
 		const auto num_bones = mesh->mNumBones;
-		for (auto j = 0u; j < num_bones; j++)
+		for (auto i = 0u; i < num_bones; i++)
 		{
-			auto bone = mesh->mBones[j];
+			auto bone = mesh->mBones[i];
+
 			for (auto k = 0u; k < num_nodes; k++)
 			{
-				if (bone->mName == flattened_nodes[k]->mName)
+				if (bone->mName == nodes[k]->mName)
 				{
 					node_bones[k] = bone;
 					break;
@@ -136,6 +145,7 @@ void AnimatedModel::CreateSkeleton(const aiScene* scene)
 		}
 	}
 
+	// Add only nodes which correspond to a bone to the skeleton
 	for (auto i = 0u; i < num_nodes; i++)
 	{
 		auto bone = node_bones[i];
@@ -147,138 +157,147 @@ void AnimatedModel::CreateSkeleton(const aiScene* scene)
 			skeleton.joint_names.emplace_back(bone->mName.C_Str());
 			joint.local_to_joint = ToGLMMat(bone->mOffsetMatrix);
 
-			auto parent_index = parent[i];
-			if (parent_index >= 0 && node_bones[parent_index] != nullptr)
+			auto node_parent_index = parent[i];
+			if (node_parent_index >= 0 && node_bones[node_parent_index] != nullptr)
 			{
-				auto parent_iter = std::find(skeleton.joint_names.begin(), skeleton.joint_names.end(), flattened_nodes[parent_index]->mName.C_Str());
+				auto parent_iter = std::find(skeleton.joint_names.begin(), skeleton.joint_names.end(), nodes[node_parent_index]->mName.C_Str());
 				assert(parent_iter != skeleton.joint_names.end());
 				joint.parent = std::distance(skeleton.joint_names.begin(), parent_iter);
 			}
 			else joint.parent = -1;
 		}
 	}
-
-	return;
 }
 
-void AnimatedModel::CreateMesh(const aiScene* scene)
+void AnimatedModel::CreateMeshes(const aiScene* scene)
 {
-	assert(scene->mNumMeshes == 1);
-	auto mesh = scene->mMeshes[0];
-	assert(mesh->HasBones() && mesh->HasNormals() && mesh->HasTextureCoords(0));
-
-	meshes.emplace_back();
-	SkinnedMesh& skinned_mesh = meshes.back();
-
-	const auto num_faces = mesh->mNumFaces;
-	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+	for (auto mesh_index = 0u; mesh_index < scene->mNumMeshes; mesh_index++)
 	{
-		auto face = mesh->mFaces[i];
-		assert(face.mNumIndices == 3);
-		skinned_mesh.indices.insert(skinned_mesh.indices.end(), { face.mIndices[0], face.mIndices[1], face.mIndices[2] });
-	}
+		auto mesh = scene->mMeshes[mesh_index];
 
-	const auto num_vertices = mesh->mNumVertices;
-	skinned_mesh.vertices.resize(num_vertices);
-	for (unsigned int i = 0; i < num_vertices; i++)
-	{
-		auto vert = mesh->mVertices[i];
-		auto normal = mesh->mNormals[i];
-		auto uv = mesh->mTextureCoords[0][i];
-		skinned_mesh.vertices[i].position = { vert.x, vert.y, vert.z };
-		skinned_mesh.vertices[i].normal = { normal.x, normal.y, normal.z };
-		skinned_mesh.vertices[i].tex_coords = { uv.x, uv.y };
-		skinned_mesh.vertices[i].joint_indices = { 0, 0, 0, 0 };
-		skinned_mesh.vertices[i].joint_weights = { 0.0f, 0.0f, 0.0f, 0.0f };
-	}
-
-	std::vector<int> num_joints_affecting(num_vertices, 0);
-
-	const auto num_bones = mesh->mNumBones;
-	const auto num_joints = skeleton.joints.size();
-	for (int i = 0; i < num_bones; i++)
-	{
-		auto bone = mesh->mBones[i];
-		auto joint_index = 0;
-		while (joint_index < num_joints && bone->mName.C_Str() != skeleton.joint_names[joint_index]) joint_index++;
-		assert(joint_index < num_joints);
-		auto vertices_affected = bone->mNumWeights;
-		for (int j = 0; j < vertices_affected; j++)
+		meshes.emplace_back();
+		SkinnedMesh& skinned_mesh = meshes.back();
+		skinned_mesh.indices_begin = indices.size();
+		
+		// Append mesh indices to model's index list, offsetting them by the appropriate amount
+		const unsigned int mesh_vertices_begin = vertices.size();
+		const auto num_faces = mesh->mNumFaces;
+		for (unsigned int i = 0; i < mesh->mNumFaces; i++)
 		{
-			auto weight = bone->mWeights[j];
-			SkinnedVertex& vertex = skinned_mesh.vertices[weight.mVertexId];
-			auto& joints_affecting_vertex = num_joints_affecting[weight.mVertexId];
-			vertex.joint_indices[joints_affecting_vertex] = joint_index;
-			vertex.joint_weights[joints_affecting_vertex] = weight.mWeight;
-			joints_affecting_vertex++;
+			auto face = mesh->mFaces[i];
+			indices.insert(indices.end(), { face.mIndices[0] + mesh_vertices_begin, face.mIndices[1] + mesh_vertices_begin, face.mIndices[2] + mesh_vertices_begin });
 		}
-	}
+		skinned_mesh.index_count = indices.size() - skinned_mesh.indices_begin;
 
-	// Load textures
-	auto mesh_material = scene->mMaterials[mesh->mMaterialIndex];
-	
-	// This assumes at most one diffuse and at most one specular maps
-	aiString texture_path;
-	if (mesh_material->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), texture_path) != aiReturn_FAILURE)
-	{
-		skinned_mesh.textures.emplace_back();
-		Texture& skinned_mesh_texture = skinned_mesh.textures.back();
+		assert(mesh->HasBones() && mesh->HasNormals() && mesh->HasTextureCoords(0));
 
-		if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
+		// Append mesh vertices to model's vertex list
+		const auto num_vertices = mesh->mNumVertices;
+		vertices.resize(vertices.size() + num_vertices);
+		for (unsigned int i = 0; i < num_vertices; i++)
 		{
-			if (texture->mHeight == 0)
+			auto vert = mesh->mVertices[i];
+			auto normal = mesh->mNormals[i];
+			auto uv = mesh->mTextureCoords[0][i];
+			vertices[i + mesh_vertices_begin].position = { vert.x, vert.y, vert.z };
+			vertices[i + mesh_vertices_begin].normal = { normal.x, normal.y, normal.z };
+			vertices[i + mesh_vertices_begin].tex_coords = { uv.x, uv.y };
+			vertices[i + mesh_vertices_begin].joint_indices = { 0, 0, 0, 0 };
+			vertices[i + mesh_vertices_begin].joint_weights = { 0.0f, 0.0f, 0.0f, 0.0f };
+		}
+
+		
+		// Each mesh stores the bones that affect its vertices. Loop through these bones and 
+		// determine which vertices are affected by which bones.
+		std::vector<int> num_joints_affecting(num_vertices, 0);
+		const auto num_bones = mesh->mNumBones;
+		const auto num_joints = skeleton.joints.size();
+		for (int i = 0; i < num_bones; i++)
+		{
+			auto bone = mesh->mBones[i];
+
+			auto joint_corresponding_to_bone = 0;
+			while (joint_corresponding_to_bone < num_joints && bone->mName.C_Str() != skeleton.joint_names[joint_corresponding_to_bone]) joint_corresponding_to_bone++;
+			assert(joint_corresponding_to_bone < num_joints);
+
+			auto vertices_affected = bone->mNumWeights;
+			for (int j = 0; j < vertices_affected; j++)
 			{
-				skinned_mesh_texture.type = TextureType::Diffuse;
-				std::string identifier = texture->mFilename.C_Str();
-				identifier = identifier.substr(identifier.find_last_of("/") + 1);
-				skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+				auto weight = bone->mWeights[j];
+				SkinnedVertex& vertex = vertices[weight.mVertexId + mesh_vertices_begin];
+				auto& joints_affecting_vertex = num_joints_affecting[weight.mVertexId];
+				vertex.joint_indices[joints_affecting_vertex] = joint_corresponding_to_bone;
+				vertex.joint_weights[joints_affecting_vertex] = weight.mWeight;
+				joints_affecting_vertex++;
+			}
+		}
+
+		// Load textures
+		auto mesh_material = scene->mMaterials[mesh->mMaterialIndex];
+
+		// This assumes at most one diffuse and at most one specular maps
+		aiString texture_path;
+		if (mesh_material->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), texture_path) != aiReturn_FAILURE)
+		{
+			skinned_mesh.textures.emplace_back();
+			Texture& skinned_mesh_texture = skinned_mesh.textures.back();
+
+			if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
+			{
+				if (texture->mHeight == 0)
+				{
+					skinned_mesh_texture.type = TextureType::Diffuse;
+					std::string identifier = texture->mFilename.C_Str();
+					identifier = identifier.substr(identifier.find_last_of("/") + 1);
+					skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+				}
+			}
+			else
+			{
+
 			}
 		}
 		else
 		{
-
+			std::cout << mesh->mName.C_Str() << " has no diffuse map\n";
 		}
-	}
-	else
-	{
-		std::cout << mesh->mName.C_Str() << " has no diffuse map\n";
-	}
 
-	if (mesh_material->Get(AI_MATKEY_TEXTURE_SPECULAR(0), texture_path) != aiReturn_FAILURE)
-	{
-		skinned_mesh.textures.emplace_back();
-		Texture& skinned_mesh_texture = skinned_mesh.textures.back();
-
-		if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
+		if (mesh_material->Get(AI_MATKEY_TEXTURE_SPECULAR(0), texture_path) != aiReturn_FAILURE)
 		{
-			if (texture->mHeight == 0)
+			skinned_mesh.textures.emplace_back();
+			Texture& skinned_mesh_texture = skinned_mesh.textures.back();
+
+			if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
 			{
-				skinned_mesh_texture.type = TextureType::Specular;
-				std::string identifier = texture->mFilename.C_Str();
-				identifier = identifier.substr(identifier.find_last_of("/") + 1);
-				skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+				if (texture->mHeight == 0)
+				{
+					skinned_mesh_texture.type = TextureType::Specular;
+					std::string identifier = texture->mFilename.C_Str();
+					identifier = identifier.substr(identifier.find_last_of("/") + 1);
+					skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+				}
+			}
+			else
+			{
+
 			}
 		}
 		else
 		{
-
+			std::cout << mesh->mName.C_Str() << " has no specular map\n";
 		}
 	}
-	else
-	{
-		std::cout << mesh->mName.C_Str() << " has no specular map\n";
-	}
 
-	glGenVertexArrays(1, &skinned_mesh.VAO);
-	glGenBuffers(1, &skinned_mesh.VBO);
-	glGenBuffers(1, &skinned_mesh.EBO);
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
 
-	glBindVertexArray(skinned_mesh.VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, skinned_mesh.VBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skinned_mesh.EBO);
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
-	glBufferData(GL_ARRAY_BUFFER, sizeof(SkinnedVertex) * skinned_mesh.vertices.size(), skinned_mesh.vertices.data(), GL_STATIC_DRAW);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * skinned_mesh.indices.size(), skinned_mesh.indices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(SkinnedVertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), indices.data(), GL_STATIC_DRAW);
 
 	// Position
 	glEnableVertexAttribArray(0);
@@ -325,7 +344,7 @@ void AnimatedModel::CreateAnimationClip(const aiScene* scene)
 	assert(animation->mTicksPerSecond != 0.0);
 
 	bind_pose.resize(skeleton.joints.size());
-	auto pair = FlattenNodes(scene->mRootNode);
+	auto pair = FlattenNodeHierarchy(scene->mRootNode);
 	auto flattened_nodes = pair.first;
 	for (int i = 0; i < bind_pose.size(); i++)
 	{
@@ -416,7 +435,7 @@ void PushChildrenOf(std::vector<aiNode*>& nodes, std::vector<int>& parent, unsig
 	}
 }
 
-std::pair<std::vector<aiNode*>, std::vector<int>> FlattenNodes(aiNode* root)
+std::pair<std::vector<aiNode*>, std::vector<int>> FlattenNodeHierarchy(aiNode* root)
 {
 	std::vector<aiNode*> flattened;
 	std::vector<int> parent;
@@ -459,6 +478,5 @@ void SkinnedMesh::Draw(Shader& shader)
 	glBindTexture(GL_TEXTURE_2D, textures[1].id);
 	shader.SetInt("diffuse", 0);
 	shader.SetInt("specular", 1);
-	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, (void*)indices_begin);
 }

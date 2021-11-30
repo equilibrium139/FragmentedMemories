@@ -118,7 +118,7 @@ int main()
 	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
 
-	AnimatedModel bob("Models/Warrok/sitting_laughing.fbx");
+	AnimatedModel bob("Models/bob/boblampclean.md5mesh");
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, projViewUBO);
 	glEnable(GL_CULL_FACE);
