@@ -49,15 +49,10 @@ static glm::mat4 ToMat4(glm::mat4x3& mat)
 
 void AnimatedModel::Draw(Shader& shader, float dt)
 {
-	static int pi = 0;
-	//time += dt;
-	//std::cout << clip.frames_per_second / clip.frame_count << '\n';
-	//float f = std::fmod(time, (clip.frames_per_second / clip.frame_count));
-	int pose_index = (pi / 3) % 250;
-	pi++;
-	/*SkeletonPose da_bind_bose;
-	da_bind_bose.local_joint_poses = bind_pose;
-	da_bind_bose.global_joint_poses.resize(skeleton.joints.size());*/
+	static float time = 0.0f;
+	time += dt;
+	float clip_duration = clip.frame_count / clip.frames_per_second;
+	float pose_index = std::fmod(time, clip_duration) * clip.frames_per_second;
 	auto& pose = clip.poses[pose_index];
 
 	glm::mat4 local_mat = glm::identity<glm::mat4>();

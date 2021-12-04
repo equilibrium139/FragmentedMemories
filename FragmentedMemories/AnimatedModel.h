@@ -1,4 +1,5 @@
 #ifndef ANIMATED_MODEL_H
+#define ANIMATED_MODEL_H
 
 #include <assimp/scene.h>
 #include <cstdint>
@@ -7,7 +8,6 @@
 #include "Shader.h"
 #include <string>
 #include <vector>
-
 
 struct SkinnedVertex
 {

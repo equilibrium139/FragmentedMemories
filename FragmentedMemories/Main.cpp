@@ -1,18 +1,10 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/norm.hpp>
 
 #include <iostream>
 #include <string>
 
-#include "AnimatedModel.h"
-#include "Camera.h"
-#include "Shader.h"
-#include "stb_image.h"
-#include "Model.h"
+#include "Scene.h"
 
 int windowWidth = 800;
 int windowHeight = 600;
@@ -106,23 +98,10 @@ int main()
 	// glEnable(GL_BLEND);
 	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	// glEnable(GL_CULL_FACE);
-
-	Shader cubeShader{ "Shaders/anim.vert", "Shaders/anim.frag" };
-	cubeShader.use();
-	GLuint cubeShaderBlockIndex = glGetUniformBlockIndex(cubeShader.id, "Matrices");
-	glUniformBlockBinding(cubeShader.id, cubeShaderBlockIndex, 0);
-	
-	GLuint projViewUBO;
-	glGenBuffers(1, &projViewUBO);
-	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
-	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
-
-	AnimatedModel bob("Models/Warrok/sitting_laughing.fbx");
-
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, projViewUBO);
 	glEnable(GL_CULL_FACE);
-	int i = 0;
+
+	Scene scene;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		float currentTime = glfwGetTime();
@@ -134,23 +113,7 @@ int main()
 
 		processInput(window);
 
-		glm::mat4 model = glm::identity<glm::mat4>();
-		model = glm::translate(model, glm::vec3(0, -2, 0));
-		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
-		glm::mat4 view = gCamera.GetViewMatrix();
-		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(view) * glm::mat3(model)));
-		glm::mat4 proj = glm::perspective(glm::radians(gCamera.Zoom), float(windowWidth) / float(windowHeight), 0.001f, 1000.0f);
-
-		glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(proj));
-		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(view));
-
-		cubeShader.use();
-		cubeShader.SetMat4("model", glm::value_ptr(model));
-		glUniformMatrix3fv(glGetUniformLocation(cubeShader.id, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
-		
-		bob.Draw(cubeShader, deltaTime);
-		i++;
+		scene.Draw(deltaTime, currentTime);
 		
 		glfwSwapBuffers(window);
 		glfwPollEvents();

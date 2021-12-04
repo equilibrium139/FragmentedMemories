@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MATERIAL_H
+#define MATERIAL_H
 
 #include "Texture.h"
 #include <glm/vec3.hpp>
@@ -13,3 +14,5 @@ struct PhongMaterial
 	Texture specular_map;
 	Texture normal_map;
 };
+
+#endif
