@@ -59,8 +59,6 @@ static unsigned int TextureFromMemory(unsigned char* buffer, int length)
 
 	auto* data = stbi_load_from_memory(buffer, length, &width, &height, &nrComponents, 0);
 
-	
-
 	GLuint id;
 	glGenTextures(1, &id);
 

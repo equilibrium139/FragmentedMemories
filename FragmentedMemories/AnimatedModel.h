@@ -3,9 +3,9 @@
 #include <assimp/scene.h>
 #include <cstdint>
 #include <glm/glm.hpp>
+#include "Material.h"
 #include "Shader.h"
 #include <string>
-#include "Texture.h"
 #include <vector>
 
 
@@ -16,12 +16,14 @@ struct SkinnedVertex
 	glm::vec2 tex_coords;
 	glm::u8vec4 joint_indices;
 	glm::vec4 joint_weights;
+	glm::vec3 tangent;
+	glm::vec3 bitangent;
 };
 
 struct SkinnedMesh
 {
 	unsigned int indices_begin, index_count;
-	std::vector<Texture> textures;
+	PhongMaterial material;
 	void Draw(Shader& shader);
 };
 

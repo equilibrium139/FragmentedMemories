@@ -118,7 +118,7 @@ int main()
 	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
 	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
 
-	AnimatedModel bob("Models/bob/boblampclean.md5mesh");
+	AnimatedModel bob("Models/Warrok/sitting_laughing.fbx");
 
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, projViewUBO);
 	glEnable(GL_CULL_FACE);
@@ -138,6 +138,7 @@ int main()
 		model = glm::translate(model, glm::vec3(0, -2, 0));
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 		glm::mat4 view = gCamera.GetViewMatrix();
+		glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(view) * glm::mat3(model)));
 		glm::mat4 proj = glm::perspective(glm::radians(gCamera.Zoom), float(windowWidth) / float(windowHeight), 0.001f, 1000.0f);
 
 		glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
@@ -146,6 +147,7 @@ int main()
 
 		cubeShader.use();
 		cubeShader.SetMat4("model", glm::value_ptr(model));
+		glUniformMatrix3fv(glGetUniformLocation(cubeShader.id, "normalMatrix"), 1, GL_FALSE, glm::value_ptr(normalMatrix));
 		
 		bob.Draw(cubeShader, deltaTime);
 		i++;

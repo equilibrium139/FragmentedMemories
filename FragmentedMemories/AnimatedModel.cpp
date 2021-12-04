@@ -98,7 +98,8 @@ void AnimatedModel::LoadAnimatedModel(const std::string& path)
 {
 	assert(AI_LMW_MAX_WEIGHTS == 4);
 	Assimp::Importer importer;
-	unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_LimitBoneWeights | aiProcess_ValidateDataStructure | aiProcess_GenSmoothNormals;
+	unsigned int flags = aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_LimitBoneWeights | aiProcess_ValidateDataStructure | aiProcess_GenSmoothNormals |
+						 aiProcess_CalcTangentSpace;
 	const aiScene* scene = importer.ReadFile(path, flags);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -199,14 +200,18 @@ void AnimatedModel::CreateMeshes(const aiScene* scene)
 			auto vert = mesh->mVertices[i];
 			auto normal = mesh->mNormals[i];
 			auto uv = mesh->mTextureCoords[0][i];
-			vertices[i + mesh_vertices_begin].position = { vert.x, vert.y, vert.z };
-			vertices[i + mesh_vertices_begin].normal = { normal.x, normal.y, normal.z };
-			vertices[i + mesh_vertices_begin].tex_coords = { uv.x, uv.y };
-			vertices[i + mesh_vertices_begin].joint_indices = { 0, 0, 0, 0 };
-			vertices[i + mesh_vertices_begin].joint_weights = { 0.0f, 0.0f, 0.0f, 0.0f };
+			auto tangent = mesh->mTangents[i];
+			auto bitangent = mesh->mBitangents[i];
+			const auto vertex_index = i + mesh_vertices_begin;
+			vertices[vertex_index].position = { vert.x, vert.y, vert.z };
+			vertices[vertex_index].normal = { normal.x, normal.y, normal.z };
+			vertices[vertex_index].tex_coords = { uv.x, uv.y };
+			vertices[vertex_index].joint_indices = { 0, 0, 0, 0 };
+			vertices[vertex_index].joint_weights = { 0.0f, 0.0f, 0.0f, 0.0f };
+			vertices[vertex_index].tangent = { tangent.x, tangent.y, tangent.z };
+			vertices[vertex_index].bitangent = { bitangent.x, bitangent.y, bitangent.z };
 		}
 
-		
 		// Each mesh stores the bones that affect its vertices. Loop through these bones and 
 		// determine which vertices are affected by which bones.
 		std::vector<int> num_joints_affecting(num_vertices, 0);
@@ -235,26 +240,35 @@ void AnimatedModel::CreateMeshes(const aiScene* scene)
 		// Load textures
 		auto mesh_material = scene->mMaterials[mesh->mMaterialIndex];
 
+		aiColor3D diffuse_color;
+		mesh_material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse_color);
+
+		aiColor3D specular_color;
+		mesh_material->Get(AI_MATKEY_COLOR_SPECULAR, specular_color);
+
+		skinned_mesh.material.diffuse_coefficient = { diffuse_color.r, diffuse_color.g, diffuse_color.b };
+		skinned_mesh.material.specular_coefficient = { specular_color.r, specular_color.g, specular_color.b };
+
+		mesh_material->Get(AI_MATKEY_SHININESS, skinned_mesh.material.shininess);
+
 		// This assumes at most one diffuse and at most one specular maps
 		aiString texture_path;
 		if (mesh_material->Get(AI_MATKEY_TEXTURE_DIFFUSE(0), texture_path) != aiReturn_FAILURE)
 		{
-			skinned_mesh.textures.emplace_back();
-			Texture& skinned_mesh_texture = skinned_mesh.textures.back();
-
 			if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
 			{
 				if (texture->mHeight == 0)
 				{
-					skinned_mesh_texture.type = TextureType::Diffuse;
 					std::string identifier = texture->mFilename.C_Str();
-					identifier = identifier.substr(identifier.find_last_of("/") + 1);
-					skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+					auto last_slash_index = identifier.find_last_of("/");
+					assert(last_slash_index != std::string::npos);
+					identifier = identifier.substr(last_slash_index + 1);
+					skinned_mesh.material.diffuse_map.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
 				}
 			}
 			else
 			{
-
+				// TODO: Load texture from file on disk
 			}
 		}
 		else
@@ -264,22 +278,43 @@ void AnimatedModel::CreateMeshes(const aiScene* scene)
 
 		if (mesh_material->Get(AI_MATKEY_TEXTURE_SPECULAR(0), texture_path) != aiReturn_FAILURE)
 		{
-			skinned_mesh.textures.emplace_back();
-			Texture& skinned_mesh_texture = skinned_mesh.textures.back();
-
 			if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
 			{
 				if (texture->mHeight == 0)
 				{
-					skinned_mesh_texture.type = TextureType::Specular;
 					std::string identifier = texture->mFilename.C_Str();
-					identifier = identifier.substr(identifier.find_last_of("/") + 1);
-					skinned_mesh_texture.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+					auto last_slash_index = identifier.find_last_of("/");
+					assert(last_slash_index != std::string::npos);
+					identifier = identifier.substr(last_slash_index + 1);
+					skinned_mesh.material.specular_map.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
 				}
 			}
 			else
 			{
+				// TODO: Load texture from file on disk
+			}
+		}
+		else
+		{
+			std::cout << mesh->mName.C_Str() << " has no specular map\n";
+		}
 
+		if (mesh_material->Get(AI_MATKEY_TEXTURE_NORMALS(0), texture_path) != aiReturn_FAILURE)
+		{
+			if (auto texture = scene->GetEmbeddedTexture(texture_path.C_Str()))
+			{
+				if (texture->mHeight == 0)
+				{
+					std::string identifier = texture->mFilename.C_Str();
+					auto last_slash_index = identifier.find_last_of("/");
+					assert(last_slash_index != std::string::npos);
+					identifier = identifier.substr(last_slash_index + 1);
+					skinned_mesh.material.normal_map.id = LoadTexture((unsigned char*)texture->pcData, texture->mWidth, identifier);
+				}
+			}
+			else
+			{
+				// TODO: Load texture from file on disk
 			}
 		}
 		else
@@ -299,25 +334,26 @@ void AnimatedModel::CreateMeshes(const aiScene* scene)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(SkinnedVertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), indices.data(), GL_STATIC_DRAW);
 
-	// Position
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, position));
 
-	// Normal
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, normal));
 
-	// Tex coord
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, tex_coords));
 
-	// Joint indices
 	glEnableVertexAttribArray(3);
 	glVertexAttribIPointer(3, 1, GL_UNSIGNED_INT, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, joint_indices));
 
-	// Joint weights
 	glEnableVertexAttribArray(4);
 	glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, joint_weights));
+
+	glEnableVertexAttribArray(5);
+	glVertexAttribPointer(5, 3, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, tangent));
+
+	glEnableVertexAttribArray(6);
+	glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE, sizeof(SkinnedVertex), (void*)offsetof(SkinnedVertex, bitangent));
 
 	glBindVertexArray(0);
 }
@@ -473,10 +509,16 @@ void SkinnedMesh::Draw(Shader& shader)
 	shader.use();
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, textures[0].id);
+	glBindTexture(GL_TEXTURE_2D, material.diffuse_map.id);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, textures[1].id);
-	shader.SetInt("diffuse", 0);
-	shader.SetInt("specular", 1);
+	glBindTexture(GL_TEXTURE_2D, material.specular_map.id);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, material.normal_map.id);
+	shader.SetInt("material.diffuse", 0);
+	shader.SetInt("material.specular", 1);
+	shader.SetInt("material.normal", 2);
+	shader.SetFloat("material.shininess", material.shininess);
+	shader.SetVec3("material.diffuse_coeff", material.diffuse_coefficient);
+	shader.SetVec3("material.specular_coeff", material.specular_coefficient);
 	glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, (void*)indices_begin);
 }

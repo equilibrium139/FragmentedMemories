@@ -22,7 +22,8 @@ void Mesh::draw(Shader& shader)
 	const char* diffuseUniformName = "material.texture_diffuse";
 	const char* specularUniformName = "material.texture_specular";
 
-	for (unsigned int i = 0; i < textures.size(); i++)
+	// TODO: fix this
+	/*for (unsigned int i = 0; i < textures.size(); i++)
 	{
 		Texture& texture = textures[i];
 		std::string textureName;
@@ -40,7 +41,7 @@ void Mesh::draw(Shader& shader)
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, texture.id);
 		shader.SetInt(textureName.c_str(), i);
-	}
+	}*/
 
 	/*if (diffuseNr == 1 && specularNr == 1)
 	{

@@ -5,6 +5,8 @@ layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoords;
 layout(location = 3) in uint aJointIndices;
 layout(location = 4) in vec4 aJointWeights;
+layout(location = 5) in vec3 aTangent;
+layout(location = 6) in vec3 aBitangent;
 
 layout (std140) uniform Matrices{
     mat4 projection;
@@ -14,8 +16,13 @@ layout (std140) uniform Matrices{
 uniform mat4 skinning_matrices[100];
 
 uniform mat4 model;
+uniform mat3 normalMatrix;
 
-out vec2 texCoords;
+out VS_OUT {
+    mat3 TBN;
+    vec3 fragViewPos;
+    vec2 texCoords;
+} vs_out;
 
 void main()
 {
@@ -25,7 +32,16 @@ void main()
     modelSpaceMatrix += skinning_matrices[(aJointIndices >> 16) & 0x00000FFu] * aJointWeights.z;
     modelSpaceMatrix += skinning_matrices[aJointIndices >> 24] * aJointWeights.w;
     modelSpacePos = modelSpaceMatrix * modelSpacePos;
+    
+    vec3 normal = normalMatrix * aNormal;
+    vec3 tangent = normalMatrix * aTangent;
+    vec3 bitangent = normalMatrix * aBitangent;
 
-    texCoords = aTexCoords;
-    gl_Position = projection * view * model * modelSpacePos;
+    vec4 viewSpacePos = view * model * modelSpacePos;
+
+    vs_out.TBN = mat3(tangent, bitangent, normal);
+    vs_out.fragViewPos = vec3(viewSpacePos);
+    vs_out.texCoords = aTexCoords;
+
+    gl_Position = projection * viewSpacePos;
 }
