@@ -31,7 +31,7 @@ struct DirectionalLight {
 	float pad3;
 
 	DirectionalLight(glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, glm::vec3 direction)
-		:ambient(ambient), diffuse(diffuse), specular(specular), direction(direction) {}
+		:ambient(ambient), diffuse(diffuse), specular(specular), direction(glm::normalize(direction)) {}
 };
 
 struct SpotLight {
@@ -48,7 +48,7 @@ struct SpotLight {
 
 	SpotLight(glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular, glm::vec3 position, glm::vec3 direction, 
 		float range, float innerAngleCutoff, float outerAngleCutoff)
-		:ambient(ambient), diffuse(diffuse), specular(specular), position(position), direction(direction), 
+		:ambient(ambient), diffuse(diffuse), specular(specular), position(position), direction(glm::normalize(direction)), 
 		rMaxSquared(range * range), cosineInnerAngleCutoff(std::cos(innerAngleCutoff)), cosineOuterAngleCutoff(std::cos(outerAngleCutoff)) {}
 };
 

@@ -78,6 +78,7 @@ void AnimatedModel::Draw(Shader& shader, float dt)
 	{
 		skinning_matrices[i] = pose.global_joint_poses[i] * ToMat4(skeleton.joints[i].local_to_joint);
 	}
+
 	shader.use();
 	glUniformMatrix4fv(glGetUniformLocation(shader.id, "skinning_matrices"), skeleton.joints.size(), GL_FALSE, glm::value_ptr(skinning_matrices[0]));
 

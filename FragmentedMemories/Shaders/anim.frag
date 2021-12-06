@@ -28,10 +28,15 @@ struct SpotLight {
 	vec3 direction;
 };
 
+#define MAX_NUM_POINT_LIGHTS 25
+#define MAX_NUM_SPOT_LIGHTS 25
+
 layout (std140) uniform Lights {
-    PointLight pointLight;
-    SpotLight spotLight;
+    PointLight pointLight[MAX_NUM_POINT_LIGHTS];
+    SpotLight spotLight[MAX_NUM_SPOT_LIGHTS];
     DirectionalLight dirLight;
+    int numPointLights;
+    int numSpotLights;
 };
 
 struct Material {
@@ -76,6 +81,23 @@ vec3 CalcSpotLightContribution(SpotLight light, vec3 mat_ambient, vec3 mat_diffu
     return ambient + totalAttenuation * (diffuse + specular);
 }
 
+vec3 CalcDirLightContribution(DirectionalLight light, vec3 mat_ambient, vec3 mat_diffuse, vec3 mat_specular, vec3 normal, vec3 fragPos)
+{
+    vec3 L = -light.direction;
+
+    vec3 ambient = light.ambient * mat_ambient;
+
+    float diffuse_strength = max(dot(normal, L), 0.0);
+    vec3 diffuse = diffuse_strength * light.diffuse * mat_diffuse;
+
+    vec3 R = reflect(-L, normal);
+    vec3 V = normalize(-fragPos);
+    float specular_strength = max(dot(R, V), 0.0);
+    vec3 specular = pow(specular_strength, material.shininess) * light.specular * mat_specular;
+
+    return ambient + diffuse + specular;
+}
+
 void main()
 {
     vec3 diffuse_texel = texture(material.diffuse, fs_in.texCoords).rgb;
@@ -87,9 +109,16 @@ void main()
     normal = normal * 2.0 - 1.0;
     normal = normalize(fs_in.TBN * normal);
 
+    // vec3 normal = normalize(fs_in.TBN[0]);
+
     vec3 finalColor = vec3(0.0, 0.0, 0.0);
 
-    finalColor += CalcSpotLightContribution(spotLight, mat_ambient, mat_diffuse, mat_specular, normal, fs_in.fragViewPos);
+    for (int i = 0; i < numSpotLights; i++)
+    {
+        finalColor += CalcSpotLightContribution(spotLight[i], mat_ambient, mat_diffuse, mat_specular, normal, fs_in.fragViewPos);
+    }
+
+    finalColor += CalcDirLightContribution(dirLight, mat_ambient, mat_diffuse, mat_specular, normal, fs_in.fragViewPos);
 
     color = vec4(finalColor, 1.0);
 }

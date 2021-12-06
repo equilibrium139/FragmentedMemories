@@ -4,13 +4,13 @@
 #include <iostream>
 #include <string>
 
+#include "Renderer.h"
 #include "Scene.h"
 
 int windowWidth = 800;
 int windowHeight = 600;
 
-void framebufferSizeCallback(GLFWwindow* window, int width, int height)
-{
+void framebufferSizeCallback(GLFWwindow* window, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
@@ -22,8 +22,7 @@ float mouseY = 300.0f;
 
 Camera gCamera(glm::vec3(0.0f, 0.0f, 3.0f));
 
-void processInput(GLFWwindow* window)
-{
+void processInput(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
 		gCamera.ProcessKeyboard(CAM_FORWARD, deltaTime);
 	}
@@ -41,8 +40,7 @@ void processInput(GLFWwindow* window)
 	}
 }
 
-void cursorPosCallback(GLFWwindow* window, double x, double y)
-{
+void cursorPosCallback(GLFWwindow* window, double x, double y) {
 	static bool firstMouse = true;
 	if (firstMouse) {
 		mouseX = (float)x;
@@ -58,15 +56,12 @@ void cursorPosCallback(GLFWwindow* window, double x, double y)
 	gCamera.ProcessMouseMovement(xoffset, yoffset);
 }
 
-void scrollCallback(GLFWwindow* window, double xoffset, double yoffset)
-{
+void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 	gCamera.ProcessMouseScroll(yoffset);
 }
 
-int main()
-{
-	if (!glfwInit())
-	{
+int main() {
+	if (!glfwInit()) {
 		std::cout << "Failed to initialize GLFW\n";
 		return -1;
 	}
@@ -75,17 +70,16 @@ int main()
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	GLFWwindow* window = glfwCreateWindow(windowWidth, windowHeight, "Breakout", NULL, NULL);
-	if (window == NULL)
-	{
+	GLFWwindow* window =
+		glfwCreateWindow(windowWidth, windowHeight, "Breakout", NULL, NULL);
+	if (window == NULL) {
 		std::cout << "Failed to create GLFW window\n";
 		glfwTerminate();
 		return -1;
 	}
 	glfwMakeContextCurrent(window);
 
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-	{
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		std::cout << "Failed to initialize GLAD\n";
 		return -1;
 	}
@@ -100,10 +94,25 @@ int main()
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glEnable(GL_CULL_FACE);
 
-	Scene scene;
+	constexpr int maxPointLights = 25;
+	constexpr int maxSpotLights = 25;
 
-	while (!glfwWindowShouldClose(window))
-	{
+	GLuint projViewUBO;
+	glGenBuffers(1, &projViewUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, projViewUBO);
+
+	GLuint lightsUBO;
+	glGenBuffers(1, &lightsUBO);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightsUBO);
+	glBufferData(GL_UNIFORM_BUFFER, maxPointLights * sizeof(PointLight) + maxSpotLights * sizeof(SpotLight) + sizeof(DirectionalLight) + 2 * sizeof(int), NULL, GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, lightsUBO);
+
+	Scene scene;
+	Renderer renderer = Renderer(projViewUBO, lightsUBO);
+
+	while (!glfwWindowShouldClose(window)) {
 		float currentTime = glfwGetTime();
 		deltaTime = currentTime - lastFrameTime;
 		lastFrameTime = currentTime;
@@ -113,8 +122,8 @@ int main()
 
 		processInput(window);
 
-		scene.Draw(deltaTime, currentTime);
-		
+		renderer.Draw(scene, deltaTime, windowWidth, windowHeight, maxPointLights, maxSpotLights);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}

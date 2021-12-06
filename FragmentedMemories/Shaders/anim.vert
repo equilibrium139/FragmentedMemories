@@ -33,9 +33,14 @@ void main()
     modelSpaceMatrix += skinning_matrices[aJointIndices >> 24] * aJointWeights.w;
     modelSpacePos = modelSpaceMatrix * modelSpacePos;
     
-    vec3 normal = normalMatrix * aNormal;
-    vec3 tangent = normalMatrix * aTangent;
-    vec3 bitangent = normalMatrix * aBitangent;
+    mat3 modelSpaceNormalMatrix = transpose(inverse(mat3(modelSpaceMatrix)));
+    mat3 finalNormalMatrix = normalMatrix * modelSpaceNormalMatrix;
+
+    // mat3 finalNormalMatrix = transpose(inverse(mat3(view) * mat3(model) * modelSpaceNormalMatrix));
+
+    vec3 normal = finalNormalMatrix * aNormal;
+    vec3 tangent = finalNormalMatrix * aTangent;
+    vec3 bitangent = finalNormalMatrix * aBitangent;
 
     vec4 viewSpacePos = view * model * modelSpacePos;
 

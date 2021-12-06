@@ -1,4 +1,7 @@
-#pragma once
+#ifndef MODEL_H
+#define MODEL_H
+
+
 
 #include <assimp/scene.h>
 
@@ -24,3 +27,5 @@
 //	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
 //	std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType texType);
 //};
+
+#endif // !MODEL_H

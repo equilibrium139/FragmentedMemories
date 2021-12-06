@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MESH_H
+#define MESH_H
 
 #include <glm/vec3.hpp>
 
@@ -29,3 +30,5 @@ private:
 	unsigned int VAO, VBO, EBO;
 	void setupMesh();
 };
+
+#endif // MESH_H

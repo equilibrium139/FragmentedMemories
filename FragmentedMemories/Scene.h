@@ -8,15 +8,13 @@
 
 struct Scene {
 	Scene();
-	void Draw(float dt, float time);
+	void Update(float dt, float time);
 
 	std::vector<PointLight> pointLights;
-	std::vector<DirectionalLight> dirLights;
 	std::vector<SpotLight> spotLights;
+	DirectionalLight dirLight;
 	std::vector<AnimatedModel> animatedModels;
-	// Camera camera;
-	Shader shader = Shader("Shaders/anim.vert", "Shaders/anim.frag");
-	unsigned int projViewUBO, lightsUBO;
+	Camera camera;
 };
 
-#endif 
+#endif

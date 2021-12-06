@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SHADER_H
+#define SHADER_H
 
 #include <glad/glad.h>
 
@@ -30,3 +31,5 @@ public:
 private:
 	std::string get_file_contents(const char* path);
 };
+
+#endif // !SHADER_H
