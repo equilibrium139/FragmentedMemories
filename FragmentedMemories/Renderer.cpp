@@ -16,17 +16,13 @@ Renderer::Renderer(unsigned int projViewUBO, unsigned int lightsUBO)
 	glUniformBlockBinding(shader.id, shaderLightsBlockIndex, 1);
 }
 
-extern Camera gCamera;
-
 void Renderer::Draw(Scene& scene, float dt, int windowWidth, int windowHeight, int maxPointLights, int maxSpotLights)
 {
 	assert(scene.pointLights.size() <= maxPointLights);
 	assert(scene.spotLights.size() <= maxSpotLights);
 
-	//glm::mat4 view = scene.camera.GetViewMatrix();
-	//glm::mat4 proj = scene.camera.GetProjectionMatrix((float)windowWidth / (float)windowHeight);
-	glm::mat4 view = gCamera.GetViewMatrix();
-	glm::mat4 proj = gCamera.GetProjectionMatrix((float)windowWidth / (float)windowHeight);
+	glm::mat4 view = scene.camera.GetViewMatrix();
+	glm::mat4 proj = scene.camera.GetProjectionMatrix((float)windowWidth / (float)windowHeight);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, projViewUBO);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4),
