@@ -4,17 +4,21 @@
 #include "AnimatedModel.h"
 #include "Camera.h"
 #include "Light.h"
+#include "ParametricSurface.h"
 #include <vector>
+#include "Plane.h"
 
 struct Scene {
 	Scene();
-	void Update(float dt, float time);
 
 	std::vector<PointLight> pointLights;
 	std::vector<SpotLight> spotLights;
 	DirectionalLight dirLight;
 	std::vector<AnimatedModel> animatedModels;
-	Camera camera;
+	ParametricSurface surface;
+	Plane plane;
+	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
+	
 };
 
 #endif
