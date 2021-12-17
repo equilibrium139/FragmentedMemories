@@ -4,9 +4,7 @@
 #include "AnimatedModel.h"
 #include "Camera.h"
 #include "Light.h"
-#include "ParametricSurface.h"
 #include <vector>
-#include "Plane.h"
 
 struct Scene {
 	Scene();
@@ -15,8 +13,6 @@ struct Scene {
 	std::vector<SpotLight> spotLights;
 	DirectionalLight dirLight;
 	std::vector<AnimatedModel> animatedModels;
-	ParametricSurface surface;
-	Plane plane;
 	Camera camera = Camera(glm::vec3(0.0f, 1.5f, 3.0f));
 };
 
