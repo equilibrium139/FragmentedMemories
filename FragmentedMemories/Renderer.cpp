@@ -115,7 +115,9 @@ void Renderer::Draw(Scene& scene, float dt, int windowWidth, int windowHeight)
 
 	// Draw plane
 	model = glm::identity<glm::mat4>();
-	model = glm::translate(model, glm::vec3(0, 0, -5));
+	//model = glm::translate(model, glm::vec3(0, 0, -5));
+	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(0.0f, -0.1f, 0.0f));
 	glUniformMatrix4fv(glGetUniformLocation(simpleShader.id, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	scene.plane.Draw(simpleShader);
 	glEnable(GL_CULL_FACE);

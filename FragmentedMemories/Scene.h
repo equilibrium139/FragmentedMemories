@@ -17,8 +17,7 @@ struct Scene {
 	std::vector<AnimatedModel> animatedModels;
 	ParametricSurface surface;
 	Plane plane;
-	Camera camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-	
+	Camera camera = Camera(glm::vec3(0.0f, 1.5f, 3.0f));
 };
 
 #endif
