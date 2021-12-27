@@ -3,10 +3,10 @@
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoords;
-layout(location = 3) in uint aJointIndices;
-layout(location = 4) in vec4 aJointWeights;
-layout(location = 5) in vec3 aTangent;
-layout(location = 6) in vec3 aBitangent;
+layout(location = 3) in vec3 aTangent;
+layout(location = 4) in uint aJointIndices;
+layout(location = 5) in vec4 aJointWeights;
+// layout(location = 6) in vec3 aBitangent;
 
 layout (std140) uniform Matrices{
     mat4 projection;
@@ -27,10 +27,14 @@ out VS_OUT {
 void main()
 {
     vec4 modelSpacePos = vec4(aPos, 1.0);
-    mat4 modelSpaceMatrix = skinning_matrices[aJointIndices & 0x00000FFu] * aJointWeights.x;
-    modelSpaceMatrix += skinning_matrices[(aJointIndices >> 8) & 0x00000FFu] * aJointWeights.y;
-    modelSpaceMatrix += skinning_matrices[(aJointIndices >> 16) & 0x00000FFu] * aJointWeights.z;
-    modelSpaceMatrix += skinning_matrices[aJointIndices >> 24] * aJointWeights.w;
+    mat4 modelSpaceMatrix = skinning_matrices[aJointIndices & 0xFFu] * aJointWeights.x;
+    modelSpaceMatrix += skinning_matrices[(aJointIndices >> 8) & 0xFFu] * aJointWeights.y;
+    modelSpaceMatrix += skinning_matrices[(aJointIndices >> 16) & 0xFFu] * aJointWeights.z;
+    modelSpaceMatrix += skinning_matrices[(aJointIndices >> 24) & 0xFFu] * aJointWeights.w;
+    // mat4 modelSpaceMatrix = identity * aJointWeights.x;
+    // modelSpaceMatrix += identity * aJointWeights.y;
+    // modelSpaceMatrix += identity * aJointWeights.z;
+    // modelSpaceMatrix += identity * aJointWeights.w;
     modelSpacePos = modelSpaceMatrix * modelSpacePos;
     
     mat3 modelSpaceNormalMatrix = transpose(inverse(mat3(modelSpaceMatrix)));
@@ -40,7 +44,7 @@ void main()
 
     vec3 normal = finalNormalMatrix * aNormal;
     vec3 tangent = finalNormalMatrix * aTangent;
-    vec3 bitangent = finalNormalMatrix * aBitangent;
+    vec3 bitangent = finalNormalMatrix * normalize(cross(aNormal, aTangent));
 
     vec4 viewSpacePos = view * model * modelSpacePos;
 

@@ -13,9 +13,6 @@ static unsigned int TextureFromFile(const char* path)
 {
 	int width, height, nrComponents;
 
-	// We didn't need stbi to flip because ASSIMP is already doing it for us!
-	// "aiProcess_FlipUVs" in Model.cpp
-
 	auto* data = stbi_load(path, &width, &height, &nrComponents, 0);
 
 	GLuint id;
@@ -53,9 +50,6 @@ static unsigned int TextureFromFile(const char* path)
 static unsigned int TextureFromMemory(unsigned char* buffer, int length)
 {
 	int width, height, nrComponents;
-
-	// We didn't need stbi to flip because ASSIMP is already doing it for us!
-	// "aiProcess_FlipUVs" in Model.cpp
 
 	auto* data = stbi_load_from_memory(buffer, length, &width, &height, &nrComponents, 0);
 

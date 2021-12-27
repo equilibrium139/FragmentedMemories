@@ -1,10 +1,14 @@
 #include "Game.h"
 
-bool Game::UpdateAndRender(GameInput& input, float dt, float time)
+GameOutput Game::UpdateAndRender(GameInput& input, float dt, float time)
 {
+	GameOutput output;
+	output.quit = false;
+
 	if (input.start)
 	{
-		return false;
+		output.quit = true;
+		return output;
 	}
 	if (input.moveUp) 
 	{
@@ -26,5 +30,5 @@ bool Game::UpdateAndRender(GameInput& input, float dt, float time)
 
 	renderer.Draw(scene, dt, input.windowWidth, input.windowHeight);
 
-	return true;
+	return output;
 }

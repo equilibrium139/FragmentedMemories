@@ -19,9 +19,14 @@ struct GameInput
 	bool start;
 };
 
+struct GameOutput
+{
+	bool quit;
+};
+
 struct Game
 {
-	bool UpdateAndRender(GameInput& input, float dt, float time);
+	GameOutput UpdateAndRender(GameInput& input, float dt, float time);
 
 	Scene scene;
 	Renderer renderer;

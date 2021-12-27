@@ -88,7 +88,8 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		ProcessInput(gameInput, window);
-		if (!game.UpdateAndRender(gameInput, deltaTime, currentTime))
+		auto gameOutput = game.UpdateAndRender(gameInput, deltaTime, currentTime);
+		if (gameOutput.quit)
 		{
 			break;
 		}

@@ -1,10 +1,6 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-
-
-#include <assimp/scene.h>
-
 #include <vector>
 #include <string>
 
@@ -15,17 +11,16 @@
 //public:
 //	Model(const char* path)
 //	{
-//		loadModel(path);
+//		LoadModel(path);
 //	}
-//	void draw(Shader& shader);
+//	void Draw(Shader& shader);
 //	std::vector<Mesh> meshes;
 //private:
 //	std::string directory;
 //
-//	void loadModel(std::string path);
-//	void processNode(aiNode* node, const aiScene* scene);
-//	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
-//	std::vector<Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, TextureType texType);
+//	void LoadModel(std::string path);
+//	void ProcessNode(aiNode* node, const aiScene* scene);
+//	Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);
 //};
 
 #endif // !MODEL_H

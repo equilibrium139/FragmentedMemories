@@ -19,5 +19,5 @@ Scene::Scene()
 		glm::vec3(0.0f, 0.0f, -1.0f), 20, glm::radians(10.0f),
 		glm::radians(20.0f));
 
-	animatedModels.emplace_back("Models/Warrok/sitting_laughing.fbx");
+	animatedModels.emplace_back("Models/Warrok2/Warrok.model");
 }
