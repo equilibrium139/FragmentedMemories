@@ -1,1 +1,0 @@
-This model was ripped by Shadowth117 with 3D Object Converter. No credit needed.
