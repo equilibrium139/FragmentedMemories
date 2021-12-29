@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.22)
 
 project(FragmentedMemories LANGUAGES CXX)
 
@@ -26,7 +26,6 @@ add_executable(FragmentedMemories src/Main.cpp
                                   src/Shader.cpp
                                   src/Texture.h
                                   src/Texture.cpp
-                                  src/stb_image.h
                                   src/stb_image.cpp
 )
 
@@ -55,4 +54,10 @@ if (WIN32)
     #                    "$<TARGET_FILE_DIR:assimp>/$<TARGET_FILE_NAME:assimp>"
     #                    $<TARGET_FILE_DIR:FragmentedMemories>
     # )
+
+    add_custom_command(TARGET FragmentedMemories POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_directory
+                       "${CMAKE_SOURCE_DIR}/data"
+                       $<TARGET_FILE_DIR:FragmentedMemories>
+    )               
 endif()

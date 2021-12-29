@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 #include <utility>
+#include <glm/glm.hpp>
 #include "stb_image.h"
 
 AnimatedModel::AnimatedModel(const std::string& path)
@@ -37,6 +38,28 @@ static glm::mat4 ToMat4(glm::mat4x3& mat)
 	mat4[3][3] = 1.0f;
 
 	return mat4;
+}
+
+static inline glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, float t)
+{
+	return a * (1.0f - t) + b * t;
+}
+
+static SkeletonPose Interpolate(const SkeletonPose& a, const SkeletonPose& b, float t)
+{
+	const auto num_poses = a.joint_poses.size();
+	SkeletonPose interpolated;
+	interpolated.joint_poses.resize(num_poses);
+	for (auto i = 0u; i < num_poses; i++)
+	{
+		auto& a_pose = a.joint_poses[i];
+		auto& b_pose = b.joint_poses[i];
+		auto& interpolated_joint_pose = interpolated.joint_poses[i];
+		interpolated_joint_pose.translation = Lerp(a_pose.translation, b_pose.translation, t);
+		interpolated_joint_pose.scale = Lerp(a_pose.scale, b_pose.scale, t);
+		interpolated_joint_pose.rotation = glm::slerp(a_pose.rotation, b_pose.rotation, t);
+	}
+	return interpolated;
 }
 
 void AnimatedModel::Draw(Shader& shader, float dt)
@@ -134,37 +157,6 @@ void AnimatedModel::LoadAnimatedModel(const std::string& path)
 		material.normal_map.id = LoadTexture(normalmap_filename.c_str(), directory);
 	}
 
-	struct Vertex
-	{
-		glm::vec3 position;
-		glm::vec3 normal;
-		glm::vec2 tex_coords;
-		glm::vec3 tangent;
-		glm::uint32 joint_indices;
-		glm::vec4 joint_weights;
-	};
-
-	Vertex* ptr = reinterpret_cast<Vertex*>(model_file_data.vertex_buffer.get());
-	auto end = ptr + model_file_data.header.num_vertices;
-	while (ptr != end)
-	{
-		auto weight_sum = ptr->joint_weights.x + ptr->joint_weights.y + ptr->joint_weights.z + ptr->joint_weights.w;
-		if (std::abs(weight_sum - 1.0f) > 0.0001f)
-		{
-			std::cout << "horry fuck\n";
-		}
-		auto a = ptr->joint_indices & 0xFFu;
-		auto b = (ptr->joint_indices >> 8) & 0xFFu;
-		auto c = (ptr->joint_indices >> 16) & 0xFFu;
-		auto d = (ptr->joint_indices >> 24) & 0xFFu;
-		auto x = 54;
-		if (a > x || b > x || c > x || d > x)
-		{
-			std::cout << "ripperoni\n";
-		}
-		ptr++;
-	}
-
 	std::copy(model_file_data.meshes.get(), model_file_data.meshes.get() + model_file_data.header.num_meshes, std::back_inserter(this->meshes));
 	std::copy(model_file_data.materials.get(), model_file_data.materials.get() + model_file_data.header.num_materials, std::back_inserter(this->materials));
 
@@ -257,22 +249,3 @@ void AnimatedModel::LoadAnimatedModel(const std::string& path)
 		for (auto& pose : pose.joint_poses) pose.rotation = glm::quat(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w);
 	}
 }
-
-//void Mesh::Draw(Shader& shader)
-//{
-//	shader.use();
-//
-//	glActiveTexture(GL_TEXTURE0);
-//	glBindTexture(GL_TEXTURE_2D, material.diffuse_map.id);
-//	glActiveTexture(GL_TEXTURE1);
-//	glBindTexture(GL_TEXTURE_2D, material.specular_map.id);
-//	glActiveTexture(GL_TEXTURE2);
-//	glBindTexture(GL_TEXTURE_2D, material.normal_map.id);
-//	shader.SetInt("material.diffuse", 0);
-//	shader.SetInt("material.specular", 1);
-//	shader.SetInt("material.normal", 2);
-//	shader.SetFloat("material.shininess", material.shininess);
-//	shader.SetVec3("material.diffuse_coeff", material.diffuse_coefficient);
-//	shader.SetVec3("material.specular_coeff", material.specular_coefficient);
-//	glDrawElements(GL_TRIANGLES, index_count, GL_UNSIGNED_INT, (void*)indices_begin);
-//}
